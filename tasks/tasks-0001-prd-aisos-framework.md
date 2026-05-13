@@ -122,15 +122,15 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
   - [x] 4.10 `tools/sandbox.py` — `run_python(code, timeout_s)` via `subprocess.run` w/ `-I` isolated mode + cwd tempdir + timeout.
   - [x] 4.11 Unit tests: planner JSON parse, registry lookup, event bus delivery order, loop guard fires, tool discovery scans `tools/`, sandbox timeout kills child.
 
-- [ ] 5.0 Security, Guardrails & Observability
-  - [ ] 5.1 `security/hitl.py` — `gate(tool_call)`: if `risk_level=="high"`, publish `hitl.request` event, await `hitl.response`; raises if denied.
-  - [ ] 5.2 `security/sanitizer.py` — `screen_input(text)` regex/keyword scan (e.g., "ignore previous", "system:" injection); logs warn.
-  - [ ] 5.3 `security/sanitizer.py` — `redact_output(text)` regex redacts `sk-…`, `AZURE…`, GUID-like tokens.
-  - [ ] 5.4 `security/rbac.py` — `check(agent_name, tool_scope)`: blocks + logs if scope not in agent's allowed_scopes from `config.toml`.
-  - [ ] 5.5 `observability/audit_log.py` — append-only JSONL writer to `aisos.audit.log`; entry: timestamp, agent, action, input_summary, output_summary, tokens, cost_usd.
-  - [ ] 5.6 `observability/cost_tracker.py` — `record(model, in_tokens, out_tokens)`; pricing table in `config.toml [cost]`; `summary()` returns per-agent + total USD.
-  - [ ] 5.7 `observability/trace.py` — publishes `trace.node` events with state (pending/running/complete/failed) to event bus for TUI consumption.
-  - [ ] 5.8 Unit tests: HITL deny path raises, sanitizer redacts secrets, RBAC blocks out-of-scope, cost math correct, audit log append-only (no overwrite).
+- [x] 5.0 Security, Guardrails & Observability
+  - [x] 5.1 `security/hitl.py` — `gate(tool_call)`: if `risk_level=="high"`, publish `hitl.request` event, await `hitl.response`; raises if denied.
+  - [x] 5.2 `security/sanitizer.py` — `screen_input(text)` regex/keyword scan (e.g., "ignore previous", "system:" injection); logs warn.
+  - [x] 5.3 `security/sanitizer.py` — `redact_output(text)` regex redacts `sk-…`, `AZURE…`, GUID-like tokens.
+  - [x] 5.4 `security/rbac.py` — `check(agent_name, tool_scope)`: blocks + logs if scope not in agent's allowed_scopes from `config.toml`.
+  - [x] 5.5 `observability/audit_log.py` — append-only JSONL writer to `aisos.audit.log`; entry: timestamp, agent, action, input_summary, output_summary, tokens, cost_usd.
+  - [x] 5.6 `observability/cost_tracker.py` — `record(model, in_tokens, out_tokens)`; pricing table in `config.toml [cost]`; `summary()` returns per-agent + total USD.
+  - [x] 5.7 `observability/trace.py` — publishes `trace.node` events with state (pending/running/complete/failed) to event bus for TUI consumption.
+  - [x] 5.8 Unit tests: HITL deny path raises, sanitizer redacts secrets, RBAC blocks out-of-scope, cost math correct, audit log append-only (no overwrite).
 
 - [ ] 6.0 Terminal/TUI interface & end-to-end integration
   - [ ] 6.1 `tui/app.py` — Textual `App` w/ Grid layout: top `TracePanel`, middle `OutputPane`, bottom `Input` widget.
