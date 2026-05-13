@@ -54,7 +54,7 @@ Task list format:
 
 When working through a task list:
 - **One sub-task at a time.** Do not start the next sub-task until the current one passes all appropriate tests.
-- After each sub-task: mark it `[x]`, update the Relevant Files section, then **pause and wait for user approval** before continuing.
+- After each sub-task: mark it `[x]`, update the Relevant Files section, then continue.
 - When **all sub-tasks** under a parent task are `[x]`:
   1. Run the full test suite.
   2. Only if all tests pass: stage changes, clean up temp files/code, then commit.
