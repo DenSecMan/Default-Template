@@ -40,6 +40,7 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
 - `planner.py` — DAG planner agent.
 - `registry.py` — Agent Registry (type, skills, scope).
 - `event_bus.py` — in-process asyncio pub/sub.
+- `loop_guard.py` — step-counter guard + `LoopGuardError`.
 - `*_test.py` — unit tests.
 
 ### Tools (`aisos/tools/` + `tools/`)
@@ -108,18 +109,18 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
   - [x] 3.6 Streaming contract: provider `stream()` yields delta strings; router preserves async iteration.
   - [x] 3.7 Unit tests: mock provider, router selection logic, token trim correctness, prompt template variable substitution.
 
-- [ ] 4.0 Execution, Orchestration & Tool Integration
-  - [ ] 4.1 `orchestration/state.py` — Pydantic `AgentState`: `prompt`, `plan: list[StepNode]`, `current_step`, `history`, `results`.
-  - [ ] 4.2 `orchestration/planner.py` — LangGraph node: prompts LLM via router for DAG, parses JSON plan via Pydantic.
-  - [ ] 4.3 `orchestration/registry.py` — `AgentRegistry`: register/lookup agent specs (name, description, allowed_tool_scopes).
-  - [ ] 4.4 `orchestration/event_bus.py` — asyncio-native pub/sub: `publish(event)`, `subscribe(topic) -> AsyncIterator`.
-  - [ ] 4.5 Step counter guard: orchestration loop aborts if `current_step > config.max_steps`, raises `LoopGuardError`.
-  - [ ] 4.6 `tools/base.py` — `BaseTool` ABC: class attrs `name`, `description`, `input_schema: type[BaseModel]`, `risk_level: Literal["low","medium","high"]`, `required_scope: str`; method `async run(input)`.
-  - [ ] 4.7 `tools/registry.py` — scan `tools/` at startup via `importlib`, collect `BaseTool` subclasses lazily.
-  - [ ] 4.8 `tools/echo_tool.py` — `EchoTool` returns input verbatim; risk_level=low.
-  - [ ] 4.9 `tools/web_search_tool.py` — `WebSearchTool` returns hard-coded mock results; risk_level=low.
-  - [ ] 4.10 `tools/sandbox.py` — `run_python(code, timeout_s)` via `subprocess.run` w/ `-I` isolated mode + cwd tempdir + timeout.
-  - [ ] 4.11 Unit tests: planner JSON parse, registry lookup, event bus delivery order, loop guard fires, tool discovery scans `tools/`, sandbox timeout kills child.
+- [x] 4.0 Execution, Orchestration & Tool Integration
+  - [x] 4.1 `orchestration/state.py` — Pydantic `AgentState`: `prompt`, `plan: list[StepNode]`, `current_step`, `history`, `results`.
+  - [x] 4.2 `orchestration/planner.py` — LangGraph node: prompts LLM via router for DAG, parses JSON plan via Pydantic.
+  - [x] 4.3 `orchestration/registry.py` — `AgentRegistry`: register/lookup agent specs (name, description, allowed_tool_scopes).
+  - [x] 4.4 `orchestration/event_bus.py` — asyncio-native pub/sub: `publish(event)`, `subscribe(topic) -> AsyncIterator`.
+  - [x] 4.5 Step counter guard: orchestration loop aborts if `current_step > config.max_steps`, raises `LoopGuardError`.
+  - [x] 4.6 `tools/base.py` — `BaseTool` ABC: class attrs `name`, `description`, `input_schema: type[BaseModel]`, `risk_level: Literal["low","medium","high"]`, `required_scope: str`; method `async run(input)`.
+  - [x] 4.7 `tools/registry.py` — scan `tools/` at startup via `importlib`, collect `BaseTool` subclasses lazily.
+  - [x] 4.8 `tools/echo_tool.py` — `EchoTool` returns input verbatim; risk_level=low.
+  - [x] 4.9 `tools/web_search_tool.py` — `WebSearchTool` returns hard-coded mock results; risk_level=low.
+  - [x] 4.10 `tools/sandbox.py` — `run_python(code, timeout_s)` via `subprocess.run` w/ `-I` isolated mode + cwd tempdir + timeout.
+  - [x] 4.11 Unit tests: planner JSON parse, registry lookup, event bus delivery order, loop guard fires, tool discovery scans `tools/`, sandbox timeout kills child.
 
 - [ ] 5.0 Security, Guardrails & Observability
   - [ ] 5.1 `security/hitl.py` — `gate(tool_call)`: if `risk_level=="high"`, publish `hitl.request` event, await `hitl.response`; raises if denied.
