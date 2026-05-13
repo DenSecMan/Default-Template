@@ -26,7 +26,7 @@ class AzureOpenAIProvider(BaseLLMProvider):
     async def chat(
         self, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> str:
-        model = kwargs.pop("model", self._chat_deployment)
+        model = kwargs.pop("model", None) or self._chat_deployment
         resp = await self._client.chat.completions.create(
             model=model, messages=list(messages), stream=False, **kwargs
         )
@@ -35,7 +35,7 @@ class AzureOpenAIProvider(BaseLLMProvider):
     async def stream(
         self, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> AsyncIterator[str]:
-        model = kwargs.pop("model", self._chat_deployment)
+        model = kwargs.pop("model", None) or self._chat_deployment
         resp = await self._client.chat.completions.create(
             model=model, messages=list(messages), stream=True, **kwargs
         )

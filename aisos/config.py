@@ -14,7 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class RoutingRule(BaseModel):
     provider: str
-    model: str
+    model: str = ""  # empty => provider falls back to its env-configured deployment
 
 
 class CostEntry(BaseModel):

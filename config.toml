@@ -5,11 +5,13 @@
 max_steps = 25
 
 [routing]
-# Capability -> {provider, model_deployment}
-# Capability keys are free-form strings used by intelligence/router.py.
-default = { provider = "azure_openai", model = "gpt-4o" }
-plan    = { provider = "azure_openai", model = "gpt-4o" }
-embed   = { provider = "azure_openai", model = "text-embedding-3-small" }
+# Capability -> {provider, model}
+# `model` is the Azure OpenAI *deployment name*. Leave empty ("") to fall back to
+# AZURE_OPENAI_DEPLOYMENT_CHAT / AZURE_OPENAI_DEPLOYMENT_EMBED from .env.
+# Only override here if you have multiple deployments and want per-capability routing.
+default = { provider = "azure_openai", model = "" }
+plan    = { provider = "azure_openai", model = "" }
+embed   = { provider = "azure_openai", model = "" }
 
 [rbac]
 # Agent name -> list of tool scopes the agent is permitted to invoke.
