@@ -10,6 +10,8 @@ from pydantic import ValidationError
 
 from aisos.intelligence.base import ChatMessage
 from aisos.intelligence.router import Router
+from aisos.intelligence.token_controller import count_messages, count_tokens
+from aisos.observability.cost_tracker import CostTracker
 from aisos.orchestration.state import AgentState, StepNode
 from aisos.tools.registry import ToolRegistry
 
@@ -71,10 +73,14 @@ class Planner:
         router: Router,
         capability: str = "plan",
         tools: ToolRegistry | None = None,
+        cost_tracker: CostTracker | None = None,
+        agent_name: str = "planner",
     ) -> None:
         self._router = router
         self._capability = capability
         self._tools = tools
+        self._cost = cost_tracker
+        self._agent_name = agent_name
 
     async def __call__(self, state: AgentState) -> AgentState:
         return await self.plan(state)
@@ -87,6 +93,12 @@ class Planner:
             {"role": "user", "content": state.prompt},
         ]
         raw = await route.provider.chat(messages, model=route.model)
+        if self._cost is not None:
+            in_tokens = count_messages(messages, route.model or "gpt-4o")
+            out_tokens = count_tokens(raw, route.model or "gpt-4o")
+            self._cost.record(
+                route.model or "gpt-4o", in_tokens, out_tokens, agent=self._agent_name
+            )
         state.plan = parse_plan(raw)
         return state
 

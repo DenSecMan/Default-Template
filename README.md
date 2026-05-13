@@ -17,4 +17,3 @@ Copy-Item .env.example .env  # fill in Azure OpenAI values
 uv run aisos
 ```
 
-See [`tasks/0001-prd-aisos-framework.md`](tasks/0001-prd-aisos-framework.md) for the v1.0 PRD.

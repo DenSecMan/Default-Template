@@ -21,6 +21,12 @@ default    = ["read"]
 
 [cost]
 # Pricing in USD per 1K tokens. Used by observability/cost_tracker.py.
+# `default` is used when the deployment/model name isn't matched explicitly below.
+# Adjust to match your Azure tenant's billing.
+[cost.default]
+input  = 0.0025
+output = 0.01
+
 [cost."gpt-4o"]
 input  = 0.0025
 output = 0.01

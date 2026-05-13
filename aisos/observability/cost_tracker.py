@@ -32,7 +32,12 @@ class CostTracker:
         self._total = CostBucket()
 
     def _price(self, model: str) -> CostEntry:
-        return self._config.toml.cost.get(model, CostEntry(input=0.0, output=0.0))
+        cost = self._config.toml.cost
+        if model in cost:
+            return cost[model]
+        if "default" in cost:
+            return cost["default"]
+        return CostEntry(input=0.0, output=0.0)
 
     def record(
         self,

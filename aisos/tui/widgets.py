@@ -1,82 +1,203 @@
-"""TUI widgets: streaming output, HITL modal, trace panel."""
+"""TUI widgets: chat messages, sidebar panels, HITL modal."""
 
 from __future__ import annotations
 
-from typing import AsyncIterator, Iterable
+from typing import Iterable
 
+from rich.markdown import Markdown
+from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label, RichLog, Static
+from textual.widgets import Button, Label, Static
 
 _STATUS_GLYPH = {
     "pending": "·",
-    "running": ">",
+    "running": "▶",
     "complete": "✓",
-    "failed": "x",
+    "failed": "✗",
 }
 
 
-class StreamingOutput(RichLog):
-    """Scrollable log buffer that consumes async iterators of token deltas."""
+class ChatMessage(Static):
+    """One styled message bubble with a role header."""
 
     DEFAULT_CSS = """
-    StreamingOutput {
-        height: 1fr;
-        border: round $primary;
+    ChatMessage {
+        margin: 1 2 0 2;
+        height: auto;
+        padding: 0;
+    }
+    ChatMessage > .role {
+        height: 1;
         padding: 0 1;
+        text-style: bold;
+    }
+    ChatMessage > .role.-user      { color: $accent; }
+    ChatMessage > .role.-assistant { color: $success; }
+    ChatMessage > .role.-system    { color: $warning; }
+    ChatMessage > .role.-error     { color: $error; }
+    ChatMessage > .body {
+        height: auto;
+        padding: 0 1;
+        background: $boost;
+        border: tall $surface;
+    }
+    ChatMessage > .body.-user      { border-left: thick $accent; }
+    ChatMessage > .body.-assistant { border-left: thick $success; }
+    ChatMessage > .body.-system    { border-left: thick $warning; }
+    ChatMessage > .body.-error     { border-left: thick $error; }
+    """
+
+    def __init__(self, role: str, body: str | Markdown | Text, *, render_markdown: bool = True) -> None:
+        super().__init__()
+        self._role = role
+        self._raw_body = body
+        self._render_markdown = render_markdown
+
+    def compose(self) -> ComposeResult:
+        role_label = Label(self._role, classes=f"role -{self._role}")
+        yield role_label
+        if isinstance(self._raw_body, (Markdown, Text)):
+            content: object = self._raw_body
+        elif self._render_markdown and self._role == "assistant":
+            content = Markdown(str(self._raw_body))
+        else:
+            content = str(self._raw_body)
+        body = Static(content, classes=f"body -{self._role}")
+        yield body
+
+
+class ChatLog(VerticalScroll):
+    """Scrollable container of ChatMessage widgets that auto-scrolls to bottom."""
+
+    DEFAULT_CSS = """
+    ChatLog {
+        height: 1fr;
+        padding: 0 1 1 1;
     }
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs, highlight=False, markup=True, wrap=True)
-
-    async def consume_stream(self, stream: AsyncIterator[str]) -> str:
-        """Append every chunk yielded; return the concatenated text."""
-        buf: list[str] = []
-        async for chunk in stream:
-            buf.append(chunk)
-            self.write(chunk, expand=True)
-        return "".join(buf)
-
-    def append_block(self, text: str) -> None:
-        self.write(text)
+    async def post_message_block(self, role: str, body: str, *, render_markdown: bool = True) -> None:
+        msg = ChatMessage(role, body, render_markdown=render_markdown)
+        await self.mount(msg)
+        self.scroll_end(animate=False)
 
 
-class TracePanel(Static):
-    """Renders a text DAG of plan steps with status glyphs."""
+class PlanPanel(Static):
+    """Sidebar plan view with status glyphs."""
 
     DEFAULT_CSS = """
-    TracePanel {
+    PlanPanel {
         height: auto;
         border: round $accent;
         padding: 0 1;
+        margin-bottom: 1;
+    }
+    """
+
+    BORDER_TITLE = "Plan"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.border_title = "Plan"
+        self._node_status: dict[str, str] = {}
+        self.update(self._format())
+
+    def update_node(self, node_id: str, status: str) -> None:
+        self._node_status[node_id] = status
+        self.update(self._format())
+
+    def reset(self, ids: Iterable[str] | None = None) -> None:
+        self._node_status = {nid: "pending" for nid in (ids or [])}
+        self.update(self._format())
+
+    def _format(self) -> str:
+        if not self._node_status:
+            return "[dim](idle)[/dim]"
+        return "\n".join(
+            f"  {_STATUS_GLYPH.get(s, '?')} {nid}" for nid, s in self._node_status.items()
+        )
+
+
+class SessionPanel(Static):
+    """Cost / token / step counters."""
+
+    DEFAULT_CSS = """
+    SessionPanel {
+        height: auto;
+        border: round $primary;
+        padding: 0 1;
+        margin-bottom: 1;
     }
     """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._node_status: dict[str, str] = {}
+        self.border_title = "Session"
+        self.cost_usd = 0.0
+        self.in_tokens = 0
+        self.out_tokens = 0
+        self.steps = 0
+        self.deployment = ""
+        self.update(self._format())
 
-    def update_node(self, node_id: str, status: str) -> None:
-        self._node_status[node_id] = status
-        self._redraw()
+    def set_summary(
+        self,
+        cost_usd: float,
+        in_tokens: int,
+        out_tokens: int,
+        steps: int,
+        deployment: str = "",
+    ) -> None:
+        self.cost_usd = cost_usd
+        self.in_tokens = in_tokens
+        self.out_tokens = out_tokens
+        self.steps = steps
+        self.deployment = deployment
+        self.update(self._format())
 
-    def reset(self, ids: Iterable[str] | None = None) -> None:
-        self._node_status = {nid: "pending" for nid in (ids or [])}
-        self._redraw()
+    def _format(self) -> str:
+        deployment_line = f"  Azure  [b]{self.deployment}[/b]\n" if self.deployment else ""
+        return (
+            f"{deployment_line}"
+            f"  Cost   [b]${self.cost_usd:.4f}[/b]\n"
+            f"  Tokens {self.in_tokens} in / {self.out_tokens} out\n"
+            f"  Steps  {self.steps}"
+        )
 
-    def _redraw(self) -> None:
-        if not self._node_status:
-            self.update("(no plan yet)")
+
+class ToolPanel(Static):
+    """List of registered tools with risk levels."""
+
+    DEFAULT_CSS = """
+    ToolPanel {
+        height: auto;
+        border: round $secondary;
+        padding: 0 1;
+    }
+    """
+
+    _RISK_COLOR = {"low": "green", "medium": "yellow", "high": "red"}
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.border_title = "Tools"
+        self._items: list[tuple[str, str]] = []  # (name, risk)
+        self.update("[dim](no tools)[/dim]")
+
+    def set_tools(self, items: Iterable[tuple[str, str]]) -> None:
+        self._items = list(items)
+        if not self._items:
+            self.update("[dim](no tools)[/dim]")
             return
-        rows = [
-            f"  {_STATUS_GLYPH.get(status, '?')} {nid} [{status}]"
-            for nid, status in self._node_status.items()
-        ]
-        self.update("Plan:\n" + "\n".join(rows))
+        lines = []
+        for name, risk in self._items:
+            color = self._RISK_COLOR.get(risk, "white")
+            lines.append(f"  • {name}  [{color}]({risk})[/{color}]")
+        self.update("\n".join(lines))
 
 
 class HITLModal(ModalScreen[bool]):
@@ -134,4 +255,11 @@ class HITLModal(ModalScreen[bool]):
         self.dismiss(False)
 
 
-__all__ = ["HITLModal", "StreamingOutput", "TracePanel"]
+__all__ = [
+    "ChatLog",
+    "ChatMessage",
+    "HITLModal",
+    "PlanPanel",
+    "SessionPanel",
+    "ToolPanel",
+]
