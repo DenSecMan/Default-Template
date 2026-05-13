@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from rich.markdown import Markdown
 from rich.text import Text
-from textual import on
+from textual import events, on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label, Static
+from textual.widgets import Button, Input, Label, OptionList, Static
+from textual.widgets.option_list import Option
 
 _STATUS_GLYPH = {
     "pending": "·",
@@ -255,9 +256,114 @@ class HITLModal(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class CommandPalette(OptionList):
+    """Filterable autocomplete list shown above the input when user types '/'."""
+
+    DEFAULT_CSS = """
+    CommandPalette {
+        max-height: 8;
+        height: auto;
+        border: round $accent;
+        background: $surface;
+        margin: 0 1;
+        display: none;
+    }
+    CommandPalette.-visible { display: block; }
+    """
+
+    def __init__(self, commands: Sequence[tuple[str, str]], **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._all = list(commands)
+        self.can_focus = False  # input keeps focus; palette is just a visual aid
+
+    def filter(self, prefix: str) -> bool:
+        """Filter options by name prefix. Returns True if any options match."""
+        self.clear_options()
+        needle = prefix.lstrip("/").lower().split(" ", 1)[0]
+        matches = [
+            Option(f"/{name}  [dim]— {desc}[/dim]", id=name)
+            for name, desc in self._all
+            if name.lower().startswith(needle)
+        ]
+        if not matches:
+            self.hide()
+            return False
+        self.add_options(matches)
+        self.highlighted = 0
+        self.show()
+        return True
+
+    def show(self) -> None:
+        self.add_class("-visible")
+
+    def hide(self) -> None:
+        self.remove_class("-visible")
+        self.clear_options()
+
+    @property
+    def is_visible(self) -> bool:
+        return self.has_class("-visible")
+
+    def selected_command(self) -> str | None:
+        if not self.is_visible or self.highlighted is None:
+            return None
+        opt = self.get_option_at_index(self.highlighted)
+        return opt.id
+
+
+class CommandInput(Input):
+    """Input that delegates ↑/↓/Tab/Esc to a CommandPalette while it's visible."""
+
+    def __init__(self, *args, palette: CommandPalette | None = None, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._palette = palette
+
+    def attach_palette(self, palette: CommandPalette) -> None:
+        self._palette = palette
+
+    async def _on_key(self, event: events.Key) -> None:  # type: ignore[override]
+        p = self._palette
+        if p is not None and p.is_visible:
+            if event.key == "down":
+                p.action_cursor_down()
+                event.stop()
+                event.prevent_default()
+                return
+            if event.key == "up":
+                p.action_cursor_up()
+                event.stop()
+                event.prevent_default()
+                return
+            if event.key == "tab":
+                cmd = p.selected_command()
+                if cmd is not None:
+                    self.value = f"/{cmd} "
+                    self.cursor_position = len(self.value)
+                    p.hide()
+                event.stop()
+                event.prevent_default()
+                return
+            if event.key == "escape":
+                p.hide()
+                event.stop()
+                event.prevent_default()
+                return
+            if event.key == "enter":
+                cmd = p.selected_command()
+                if cmd is not None and self.value.lstrip("/").split(" ", 1)[0] != cmd:
+                    # User highlighted an option without finishing typing it; commit it.
+                    self.value = f"/{cmd}"
+                    self.cursor_position = len(self.value)
+                p.hide()
+                # fall through to default Enter handling (Input.Submitted)
+        await super()._on_key(event)
+
+
 __all__ = [
     "ChatLog",
     "ChatMessage",
+    "CommandInput",
+    "CommandPalette",
     "HITLModal",
     "PlanPanel",
     "SessionPanel",

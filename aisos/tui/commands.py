@@ -65,6 +65,18 @@ COMMANDS: dict[str, CommandFn] = {
     "exit": _cmd_quit,
 }
 
+DESCRIPTIONS: dict[str, str] = {
+    "help": "Show available commands and registered tools",
+    "status": "Show agents and session cost",
+    "quit": "Exit AISOS",
+    "exit": "Exit AISOS",
+}
+
+
+def list_commands() -> list[tuple[str, str]]:
+    """Return (name, description) pairs in stable display order."""
+    return [(name, DESCRIPTIONS.get(name, "")) for name in COMMANDS]
+
 
 def is_command(text: str) -> bool:
     return text.startswith("/")
@@ -86,4 +98,11 @@ def dispatch(ctx: CommandContext, text: str) -> bool:
     return True
 
 
-__all__ = ["COMMANDS", "CommandContext", "dispatch", "is_command"]
+__all__ = [
+    "COMMANDS",
+    "CommandContext",
+    "DESCRIPTIONS",
+    "dispatch",
+    "is_command",
+    "list_commands",
+]

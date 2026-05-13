@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from aisos.orchestration.registry import AgentRegistry, AgentSpec
 from aisos.tools.base import BaseTool
 from aisos.tools.registry import ToolRegistry
-from aisos.tui.commands import CommandContext, dispatch, is_command
+from aisos.tui.commands import CommandContext, dispatch, is_command, list_commands
 
 
 class _In(BaseModel):
@@ -83,3 +83,13 @@ def test_unknown_command_handled_gracefully() -> None:
 def test_non_command_returns_false() -> None:
     ctx = _ctx()
     assert dispatch(ctx, "hello world") is False
+
+
+def test_list_commands_returns_pairs_with_descriptions() -> None:
+    pairs = list_commands()
+    names = [n for n, _ in pairs]
+    assert "help" in names
+    assert "status" in names
+    assert "quit" in names
+    # every command must have a description
+    assert all(desc for _, desc in pairs)

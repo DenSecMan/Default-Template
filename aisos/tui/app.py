@@ -22,9 +22,11 @@ from aisos.orchestration.registry import AgentRegistry, AgentSpec
 from aisos.security.hitl import REQUEST_TOPIC, RESPONSE_TOPIC
 from aisos.security.sanitizer import redact_output
 from aisos.tools.registry import ToolRegistry
-from aisos.tui.commands import CommandContext, dispatch, is_command
+from aisos.tui.commands import CommandContext, dispatch, is_command, list_commands
 from aisos.tui.widgets import (
     ChatLog,
+    CommandInput,
+    CommandPalette,
     HITLModal,
     PlanPanel,
     SessionPanel,
@@ -51,7 +53,11 @@ class AISOSApp(App[int]):
         min-width: 28;
         padding: 1 1 0 0;
     }
-    #cmd { dock: bottom; margin: 0 1 0 1; }
+    #input-area {
+        dock: bottom;
+        height: auto;
+    }
+    #cmd { margin: 0 1 0 1; }
     """
 
     def __init__(
@@ -74,6 +80,8 @@ class AISOSApp(App[int]):
         self._plan: PlanPanel | None = None
         self._session: SessionPanel | None = None
         self._tools_panel: ToolPanel | None = None
+        self._palette: CommandPalette | None = None
+        self._input: CommandInput | None = None
         self._steps_total = 0
 
     @staticmethod
@@ -110,7 +118,15 @@ class AISOSApp(App[int]):
                 yield self._session
                 self._tools_panel = ToolPanel(id="tools")
                 yield self._tools_panel
-        yield Input(placeholder="Type a prompt or /help…  (^q quit, ^l clear)", id="cmd")
+        with Vertical(id="input-area"):
+            self._palette = CommandPalette(list_commands(), id="palette")
+            yield self._palette
+            self._input = CommandInput(
+                placeholder="Type a prompt or /help…  (^q quit, ^l clear)",
+                id="cmd",
+                palette=self._palette,
+            )
+            yield self._input
 
     def on_mount(self) -> None:
         # Populate static panels.
@@ -182,9 +198,20 @@ class AISOSApp(App[int]):
         self._steps_total = 0
         self._refresh_session_panel()
 
+    def on_input_changed(self, message: Input.Changed) -> None:
+        if self._palette is None:
+            return
+        value = message.value
+        if value.startswith("/"):
+            self._palette.filter(value)
+        else:
+            self._palette.hide()
+
     async def on_input_submitted(self, message: Input.Submitted) -> None:
         text = message.value.strip()
         message.input.value = ""
+        if self._palette is not None:
+            self._palette.hide()
         if not text:
             return
         if is_command(text):
