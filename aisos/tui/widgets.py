@@ -58,23 +58,23 @@ class TracePanel(Static):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._nodes: dict[str, str] = {}
+        self._node_status: dict[str, str] = {}
 
     def update_node(self, node_id: str, status: str) -> None:
-        self._nodes[node_id] = status
-        self._render()
+        self._node_status[node_id] = status
+        self._redraw()
 
     def reset(self, ids: Iterable[str] | None = None) -> None:
-        self._nodes = {nid: "pending" for nid in (ids or [])}
-        self._render()
+        self._node_status = {nid: "pending" for nid in (ids or [])}
+        self._redraw()
 
-    def _render(self) -> None:
-        if not self._nodes:
+    def _redraw(self) -> None:
+        if not self._node_status:
             self.update("(no plan yet)")
             return
         rows = [
             f"  {_STATUS_GLYPH.get(status, '?')} {nid} [{status}]"
-            for nid, status in self._nodes.items()
+            for nid, status in self._node_status.items()
         ]
         self.update("Plan:\n" + "\n".join(rows))
 
