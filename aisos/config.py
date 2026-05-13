@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,11 +44,27 @@ class Settings(BaseSettings):
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
     azure_openai_api_version: str = "2024-10-21"
-    azure_openai_deployment_chat: str = "gpt-4o"
-    azure_openai_deployment_embed: str = "text-embedding-3-small"
+
+    # Single shared deployment (matches the convention of other internal apps).
+    # Used as a fallback when _CHAT / _EMBED aren't set explicitly.
+    azure_openai_deployment: str = ""
+
+    azure_openai_deployment_chat: str = ""
+    azure_openai_deployment_embed: str = ""
 
     aisos_db_path: str = "./aisos.db"
     aisos_config_path: str = "./config.toml"
+
+    @model_validator(mode="after")
+    def _resolve_deployments(self) -> "Settings":
+        # Prefer per-purpose vars; fall back to the shared AZURE_OPENAI_DEPLOYMENT.
+        if not self.azure_openai_deployment_chat:
+            self.azure_openai_deployment_chat = self.azure_openai_deployment or "gpt-4o"
+        if not self.azure_openai_deployment_embed:
+            self.azure_openai_deployment_embed = (
+                self.azure_openai_deployment or "text-embedding-3-small"
+            )
+        return self
 
 
 def _load_toml(path: Path) -> dict[str, Any]:
