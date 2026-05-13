@@ -90,14 +90,14 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
   - [x] 1.9 `aisos/__main__.py` — `main()` sets `WindowsProactorEventLoopPolicy`, launches stub Textual app.
   - [x] 1.10 Smoke test: `uv run aisos` launches empty TUI without error.
 
-- [ ] 2.0 Memory & State subsystem (SQLite + `sqlite-vec`)
-  - [ ] 2.1 `db.py` — `get_connection()` opens path from `AISOS_DB_PATH`, enables WAL, loads `sqlite-vec`.
-  - [ ] 2.2 Schema migrations: `sessions`, `short_term_snapshots`, `vec_embeddings` (vec0 virtual table, 1536 dim), `recipes`, `audit_log_index` tables.
-  - [ ] 2.3 `short_term.py` — in-memory `deque[Step]` + `checkpoint()` writes serialized history to SQLite.
-  - [ ] 2.4 `embeddings.py` — async embed via `AsyncAzureOpenAI.embeddings.create`, batch support.
-  - [ ] 2.5 `semantic.py` — `add(text, metadata)` embeds + inserts; `search(query, k)` returns top-k by cosine.
-  - [ ] 2.6 `procedural.py` — `save_recipe(name, plan_json)`, `load_recipe(name)`, `list_recipes()`.
-  - [ ] 2.7 Unit tests: migration idempotency, snapshot round-trip, similarity search returns ordered results, recipe CRUD.
+- [x] 2.0 Memory & State subsystem (SQLite + `sqlite-vec`)
+  - [x] 2.1 `db.py` — `get_connection()` opens path from `AISOS_DB_PATH`, enables WAL, loads `sqlite-vec`.
+  - [x] 2.2 Schema migrations: `sessions`, `short_term_snapshots`, `vec_embeddings` (vec0 virtual table, 1536 dim), `recipes`, `audit_log_index` tables.
+  - [x] 2.3 `short_term.py` — in-memory `deque[Step]` + `checkpoint()` writes serialized history to SQLite.
+  - [x] 2.4 `embeddings.py` — async embed via `AsyncAzureOpenAI.embeddings.create`, batch support.
+  - [x] 2.5 `semantic.py` — `add(text, metadata)` embeds + inserts; `search(query, k)` returns top-k by cosine.
+  - [x] 2.6 `procedural.py` — `save_recipe(name, plan_json)`, `load_recipe(name)`, `list_recipes()`.
+  - [x] 2.7 Unit tests: migration idempotency, snapshot round-trip, similarity search returns ordered results, recipe CRUD.
 
 - [ ] 3.0 Intelligence & Routing layer
   - [ ] 3.1 `intelligence/base.py` — `BaseLLMProvider` ABC: `async chat(messages, **kwargs)`, `async stream(messages, **kwargs) -> AsyncIterator[str]`, `async embed(texts) -> list[list[float]]`.
