@@ -169,6 +169,16 @@ class AISOSApp(App[int]):
             return
         await self._chat.post_message_block(role, redact_output(body), render_markdown=render_markdown)
 
+    async def _post_and_get(self, role: str, body: str, *, render_markdown: bool = True):
+        """Mount a ChatMessage and return the widget so it can be removed later."""
+        if self._chat is None:
+            return None
+        from aisos.tui.widgets import ChatMessage
+        msg = ChatMessage(role, redact_output(body), render_markdown=render_markdown)
+        await self._chat.mount(msg)
+        self._chat.scroll_end(animate=False)
+        return msg
+
     def _refresh_session_panel(self) -> None:
         if self._session is None:
             return
@@ -221,13 +231,26 @@ class AISOSApp(App[int]):
         await self._post("user", text, render_markdown=False)
         if self._plan is not None:
             self._plan.reset()
+        # Run the orchestrator as a background task so the UI stays responsive.
+        asyncio.create_task(self._run_prompt(text))
+
+    async def _run_prompt(self, text: str) -> None:
+        if self._input is not None:
+            self._input.disabled = True
+        thinking = await self._post_and_get("assistant", "_Thinking…_", render_markdown=True)
         try:
             result = await self._orchestrator.run(text)
         except Exception as exc:
+            if thinking is not None:
+                await thinking.remove()
             await self._post("error", f"{type(exc).__name__}: {exc}", render_markdown=False)
             return
-        # Reflect the planned nodes immediately even if no trace events fired
-        # for them yet (they will be marked complete via _listen_trace).
+        finally:
+            if self._input is not None:
+                self._input.disabled = False
+                self._input.focus()
+        if thinking is not None:
+            await thinking.remove()
         if self._plan is not None and result.state.plan:
             for node in result.state.plan:
                 self._plan.update_node(node.id, node.status)

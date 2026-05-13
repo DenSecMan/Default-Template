@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Iterable, Sequence
 
 from rich.markdown import Markdown
+from rich.markup import escape as markup_escape
 from rich.text import Text
 from textual import events, on
 from textual.app import ComposeResult
@@ -66,7 +67,9 @@ class ChatMessage(Static):
         elif self._render_markdown and self._role == "assistant":
             content = Markdown(str(self._raw_body))
         else:
-            content = str(self._raw_body)
+            # Escape so Pydantic/Python error messages with [...] syntax don't
+            # get misinterpreted as Rich markup tags and crash the renderer.
+            content = markup_escape(str(self._raw_body))
         body = Static(content, classes=f"body -{self._role}")
         yield body
 

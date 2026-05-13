@@ -79,6 +79,16 @@ class Orchestrator:
                 self._record_audit(node, output=result)
                 if isinstance(result, dict) and "text" in result:
                     output_chunks.append(str(result["text"]))
+        # If no text came from noop steps, summarize tool results via LLM.
+        if not output_chunks:
+            tool_results = {
+                nid: res for nid, res in state.results.items()
+                if isinstance(res, dict) and "text" not in res
+            }
+            if tool_results:
+                summary = await self._planner.summarize(state.prompt, tool_results)
+                output_chunks.append(summary)
+
         text = redact_output("\n".join(output_chunks))
         return RunResult(state=state, output_text=text)
 

@@ -65,8 +65,15 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
-def configure_logging(level: int | str = "INFO") -> logging.Logger:
-    """Idempotently configure the root logger for JSON output to stderr."""
+def configure_logging(
+    level: int | str = "INFO",
+    log_file: str | None = None,
+) -> logging.Logger:
+    """Idempotently configure the root logger.
+
+    When log_file is given, output goes to that file instead of stderr — use
+    this when running the TUI so SDK verbose logs don't bleed into the terminal.
+    """
     root = logging.getLogger()
     root.setLevel(level)
 
@@ -74,11 +81,20 @@ def configure_logging(level: int | str = "INFO") -> logging.Logger:
         if getattr(handler, "_aisos_json", False):
             return root
 
-    handler = logging.StreamHandler(stream=sys.stderr)
+    if log_file:
+        handler: logging.Handler = logging.FileHandler(log_file, encoding="utf-8")
+    else:
+        handler = logging.StreamHandler(stream=sys.stderr)
     handler.setFormatter(JsonFormatter())
     handler.addFilter(_ContextFilter())
     handler._aisos_json = True  # type: ignore[attr-defined]
     root.addHandler(handler)
+
+    # Silence noisy Azure SDK and asyncio loggers — they log HTTP headers, tokens,
+    # and unclosed-session warnings at INFO/ERROR that are irrelevant to the user.
+    for noisy in ("azure", "asyncio", "urllib3"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
     return root
 
 

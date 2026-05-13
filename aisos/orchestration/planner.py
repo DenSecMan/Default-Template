@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Sequence
+from typing import Any, Sequence
 
 from pydantic import ValidationError
 
@@ -101,6 +101,34 @@ class Planner:
             )
         state.plan = parse_plan(raw)
         return state
+
+    async def summarize(self, prompt: str, tool_results: dict[str, Any]) -> str:
+        """Turn raw tool outputs into a plain-language answer for the user."""
+        route = self._router.route(self._capability)
+        results_text = json.dumps(tool_results, indent=2, default=str)
+        messages: Sequence[ChatMessage] = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a helpful AI assistant. The user made a request and tools "
+                    "were run to answer it. Given the tool results below, write a concise, "
+                    "clear plain-English answer. Use markdown where it helps readability "
+                    "(tables, bullet lists). Do not expose raw JSON unless the user asked for it."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"Original request: {prompt}\n\nTool results:\n{results_text}",
+            },
+        ]
+        raw = await route.provider.chat(messages, model=route.model)
+        if self._cost is not None:
+            in_tokens = count_messages(messages, route.model or "gpt-4o")
+            out_tokens = count_tokens(raw, route.model or "gpt-4o")
+            self._cost.record(
+                route.model or "gpt-4o", in_tokens, out_tokens, agent=self._agent_name
+            )
+        return raw
 
 
 __all__ = ["Planner", "parse_plan"]

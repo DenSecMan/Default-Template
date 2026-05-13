@@ -11,6 +11,11 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Resolve project root from this file's location so .env is found regardless
+# of the working directory the user launched the process from.
+_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+_DEFAULT_ENV_FILE = _PROJECT_ROOT / ".env"
+
 
 class RoutingRule(BaseModel):
     provider: str
@@ -35,7 +40,7 @@ class Settings(BaseSettings):
     """Environment-backed settings (.env)."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_DEFAULT_ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -60,6 +65,12 @@ class Settings(BaseSettings):
 
     aisos_db_path: str = "./aisos.db"
     aisos_config_path: str = "./config.toml"
+
+    # Threat-intel tool API keys (optional — tools skip calls if blank)
+    virustotal_api_key: str = ""
+    abuseipdb_api_key: str = ""
+    alienvault_otx_api_key: str = ""
+    nvd_api_key: str = ""
 
     @model_validator(mode="after")
     def _resolve_deployments(self) -> "Settings":
@@ -100,7 +111,8 @@ def load_config(
         settings = Settings(_env_file=str(env_file))  # type: ignore[call-arg]
     else:
         settings = Settings()
-    toml_path = Path(toml_file) if toml_file else Path(settings.aisos_config_path)
+    raw_toml_path = Path(toml_file) if toml_file else Path(settings.aisos_config_path)
+    toml_path = raw_toml_path if raw_toml_path.is_absolute() else _PROJECT_ROOT / raw_toml_path
     raw = _load_toml(toml_path)
     toml = TomlConfig.model_validate(raw)
     return AppConfig(settings=settings, toml=toml)

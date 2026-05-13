@@ -5,6 +5,7 @@ description = "AISOS — Agentic Intelligence Shell Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "aiohttp>=3.13.5",
     "azure-identity>=1.25.3",
     "azure-monitor-query>=2.0.0",
     "langgraph>=1.2.0",

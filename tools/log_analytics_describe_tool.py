@@ -56,17 +56,19 @@ class LogAnalyticsDescribeTableTool(BaseTool):
 
     async def run(self, input: LogAnalyticsDescribeInput) -> dict[str, Any]:  # type: ignore[override]
         workspace = _la._resolve_workspace(input.workspace_id)
-        client = _la._build_client()
+        credential = _la._build_credential()
         kql = f"{input.table} | getschema | project ColumnName, DataType"
         try:
-            response = await client.query_workspace(
-                workspace_id=workspace,
-                query=kql,
-                timespan=timedelta(hours=1),
-            )
-            payload = _la._serialize(response, max_rows=500)
+            from azure.monitor.query.aio import LogsQueryClient
+            async with LogsQueryClient(credential) as client:
+                response = await client.query_workspace(
+                    workspace_id=workspace,
+                    query=kql,
+                    timespan=timedelta(hours=1),
+                )
+                payload = _la._serialize(response, max_rows=500)
         finally:
-            await client.close()
+            await credential.close()
 
         columns: list[dict[str, str]] = []
         for table in payload.get("tables", []):

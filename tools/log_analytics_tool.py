@@ -16,6 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from aisos.config import get_config
 from aisos.tools.base import BaseTool
 
 
@@ -45,9 +46,10 @@ class LogAnalyticsConfigError(RuntimeError):
 
 
 def _build_credential():
-    tenant = os.environ.get("AZURE_TENANT_ID", "")
-    client_id = os.environ.get("AZURE_CLIENT_ID", "")
-    secret = os.environ.get("AZURE_CLIENT_SECRET", "")
+    s = get_config().settings
+    tenant = s.azure_tenant_id or os.environ.get("AZURE_TENANT_ID", "")
+    client_id = s.azure_client_id or os.environ.get("AZURE_CLIENT_ID", "")
+    secret = s.azure_client_secret or os.environ.get("AZURE_CLIENT_SECRET", "")
     missing = [n for n, v in (
         ("AZURE_TENANT_ID", tenant),
         ("AZURE_CLIENT_ID", client_id),
@@ -79,7 +81,7 @@ def _build_client():
 
 
 def _resolve_workspace(override: str | None) -> str:
-    ws = override or os.environ.get("AZURE_WORKSPACE_ID", "")
+    ws = override or get_config().settings.azure_workspace_id or os.environ.get("AZURE_WORKSPACE_ID", "")
     if not ws:
         raise LogAnalyticsConfigError(
             "No workspace id (set AZURE_WORKSPACE_ID or pass workspace_id arg)"
@@ -142,16 +144,18 @@ class LogAnalyticsQueryTool(BaseTool):
 
     async def run(self, input: LogAnalyticsQueryInput) -> dict[str, Any]:  # type: ignore[override]
         workspace = _resolve_workspace(input.workspace_id)
-        client = _build_client()
+        credential = _build_credential()
         try:
-            response = await client.query_workspace(
-                workspace_id=workspace,
-                query=input.kql,
-                timespan=timedelta(hours=input.timespan_hours),
-            )
-            return _serialize(response, input.max_rows)
+            from azure.monitor.query.aio import LogsQueryClient
+            async with LogsQueryClient(credential) as client:
+                response = await client.query_workspace(
+                    workspace_id=workspace,
+                    query=input.kql,
+                    timespan=timedelta(hours=input.timespan_hours),
+                )
+                return _serialize(response, input.max_rows)
         finally:
-            await client.close()
+            await credential.close()
 
 
 __all__ = [

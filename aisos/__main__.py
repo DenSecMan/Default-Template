@@ -16,7 +16,7 @@ def _set_windows_event_loop_policy() -> None:
 def main() -> int:
     """Entry point for `aisos` console script."""
     _set_windows_event_loop_policy()
-    configure_logging()
+    configure_logging(log_file="aisos.debug.log")
 
     from aisos.tui.app import AISOSApp
 
