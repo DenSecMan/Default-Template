@@ -99,14 +99,14 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
   - [x] 2.6 `procedural.py` — `save_recipe(name, plan_json)`, `load_recipe(name)`, `list_recipes()`.
   - [x] 2.7 Unit tests: migration idempotency, snapshot round-trip, similarity search returns ordered results, recipe CRUD.
 
-- [ ] 3.0 Intelligence & Routing layer
-  - [ ] 3.1 `intelligence/base.py` — `BaseLLMProvider` ABC: `async chat(messages, **kwargs)`, `async stream(messages, **kwargs) -> AsyncIterator[str]`, `async embed(texts) -> list[list[float]]`.
-  - [ ] 3.2 `intelligence/azure_openai.py` — concrete provider using `AsyncAzureOpenAI`; reads endpoint/key/version/deployments from config.
-  - [ ] 3.3 `intelligence/router.py` — `route(task_capability)` -> provider+model from `config.toml [routing]` rules.
-  - [ ] 3.4 `intelligence/prompt_manager.py` — load templates from `aisos/prompts/*.md`; inject persona, tool catalog, task context.
-  - [ ] 3.5 `intelligence/token_controller.py` — `count(text, model)` via tiktoken; `trim(messages, max_tokens)` evicts oldest non-system.
-  - [ ] 3.6 Streaming contract: provider `stream()` yields delta strings; router preserves async iteration.
-  - [ ] 3.7 Unit tests: mock provider, router selection logic, token trim correctness, prompt template variable substitution.
+- [x] 3.0 Intelligence & Routing layer
+  - [x] 3.1 `intelligence/base.py` — `BaseLLMProvider` ABC: `async chat(messages, **kwargs)`, `async stream(messages, **kwargs) -> AsyncIterator[str]`, `async embed(texts) -> list[list[float]]`.
+  - [x] 3.2 `intelligence/azure_openai.py` — concrete provider using `AsyncAzureOpenAI`; reads endpoint/key/version/deployments from config.
+  - [x] 3.3 `intelligence/router.py` — `route(task_capability)` -> provider+model from `config.toml [routing]` rules.
+  - [x] 3.4 `intelligence/prompt_manager.py` — load templates from `aisos/prompts/*.md`; inject persona, tool catalog, task context.
+  - [x] 3.5 `intelligence/token_controller.py` — `count(text, model)` via tiktoken; `trim(messages, max_tokens)` evicts oldest non-system.
+  - [x] 3.6 Streaming contract: provider `stream()` yields delta strings; router preserves async iteration.
+  - [x] 3.7 Unit tests: mock provider, router selection logic, token trim correctness, prompt template variable substitution.
 
 - [ ] 4.0 Execution, Orchestration & Tool Integration
   - [ ] 4.1 `orchestration/state.py` — Pydantic `AgentState`: `prompt`, `plan: list[StepNode]`, `current_step`, `history`, `results`.
