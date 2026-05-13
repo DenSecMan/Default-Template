@@ -7,7 +7,7 @@ import asyncio
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Footer, Header, Input
+from textual.widgets import Header, Input
 
 from aisos.config import AppConfig, load_config
 from aisos.intelligence.azure_openai import AzureOpenAIProvider
@@ -111,7 +111,6 @@ class AISOSApp(App[int]):
                 self._tools_panel = ToolPanel(id="tools")
                 yield self._tools_panel
         yield Input(placeholder="Type a prompt or /help…  (^q quit, ^l clear)", id="cmd")
-        yield Footer()
 
     def on_mount(self) -> None:
         # Populate static panels.
