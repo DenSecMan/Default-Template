@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     azure_openai_deployment_chat: str = ""
     azure_openai_deployment_embed: str = ""
 
+    # Azure Service Principal (Sentinel / Log Analytics)
+    azure_tenant_id: str = ""
+    azure_client_id: str = ""
+    azure_client_secret: str = ""
+    azure_workspace_id: str = ""
+
     aisos_db_path: str = "./aisos.db"
     aisos_config_path: str = "./config.toml"
 
