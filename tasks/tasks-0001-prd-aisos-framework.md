@@ -41,6 +41,7 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
 - `registry.py` — Agent Registry (type, skills, scope).
 - `event_bus.py` — in-process asyncio pub/sub.
 - `loop_guard.py` — step-counter guard + `LoopGuardError`.
+- `orchestrator.py` — sanitizer -> planner -> tool exec (HITL+RBAC) -> trace, returns `RunResult`.
 - `*_test.py` — unit tests.
 
 ### Tools (`aisos/tools/` + `tools/`)
@@ -49,6 +50,7 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
 - `aisos/tools/sandbox.py` — subprocess sandbox runtime w/ timeout.
 - `tools/echo_tool.py` — `EchoTool` stub.
 - `tools/web_search_tool.py` — `WebSearchTool` stub (mock data).
+- `tools/dangerous_demo_tool.py` — high-risk demo tool used by HITL e2e tests.
 - `*_test.py` — unit tests.
 
 ### Security (`aisos/security/`)
@@ -132,13 +134,13 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
   - [x] 5.7 `observability/trace.py` — publishes `trace.node` events with state (pending/running/complete/failed) to event bus for TUI consumption.
   - [x] 5.8 Unit tests: HITL deny path raises, sanitizer redacts secrets, RBAC blocks out-of-scope, cost math correct, audit log append-only (no overwrite).
 
-- [ ] 6.0 Terminal/TUI interface & end-to-end integration
-  - [ ] 6.1 `tui/app.py` — Textual `App` w/ Grid layout: top `TracePanel`, middle `OutputPane`, bottom `Input` widget.
-  - [ ] 6.2 `tui/widgets.py` — `StreamingOutput`: consumes async iterator of tokens, appends to scrollable buffer.
-  - [ ] 6.3 `tui/widgets.py` — `HITLModal`: shows tool call summary + `[APPROVE] [CANCEL]` buttons; emits `hitl.response`.
-  - [ ] 6.4 `tui/widgets.py` — `TracePanel`: subscribes to `trace.node` events; renders text-based DAG w/ status glyphs.
-  - [ ] 6.5 `tui/commands.py` — dispatch `/help` (lists slash commands + registered tools), `/status` (Agent Registry + session cost), `/quit`.
-  - [ ] 6.6 Wire: input text -> sanitizer -> router -> planner -> orchestrator -> tool calls (via HITL+RBAC) -> stream output to TUI.
-  - [ ] 6.7 `tests/test_e2e.py` — async test: feed prompt that triggers `EchoTool`, assert tool result rendered in output pane.
-  - [ ] 6.8 `tests/test_e2e.py` — async test: tool flagged `risk_level=high` triggers HITLModal; simulate approve -> tool runs; simulate cancel -> tool blocked.
-  - [ ] 6.9 Manual smoke: clean Windows machine, fresh `uv sync`, set `.env`, `uv run aisos` -> type prompt -> see end-to-end loop complete.
+- [x] 6.0 Terminal/TUI interface & end-to-end integration
+  - [x] 6.1 `tui/app.py` — Textual `App` w/ Grid layout: top `TracePanel`, middle `OutputPane`, bottom `Input` widget.
+  - [x] 6.2 `tui/widgets.py` — `StreamingOutput`: consumes async iterator of tokens, appends to scrollable buffer.
+  - [x] 6.3 `tui/widgets.py` — `HITLModal`: shows tool call summary + `[APPROVE] [CANCEL]` buttons; emits `hitl.response`.
+  - [x] 6.4 `tui/widgets.py` — `TracePanel`: subscribes to `trace.node` events; renders text-based DAG w/ status glyphs.
+  - [x] 6.5 `tui/commands.py` — dispatch `/help` (lists slash commands + registered tools), `/status` (Agent Registry + session cost), `/quit`.
+  - [x] 6.6 Wire: input text -> sanitizer -> router -> planner -> orchestrator -> tool calls (via HITL+RBAC) -> stream output to TUI.
+  - [x] 6.7 `tests/test_e2e.py` — async test: feed prompt that triggers `EchoTool`, assert tool result rendered in output pane.
+  - [x] 6.8 `tests/test_e2e.py` — async test: tool flagged `risk_level=high` triggers HITLModal; simulate approve -> tool runs; simulate cancel -> tool blocked.
+  - [x] 6.9 Manual smoke: clean Windows machine, fresh `uv sync`, set `.env`, `uv run aisos` -> type prompt -> see end-to-end loop complete.
