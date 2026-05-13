@@ -11,13 +11,33 @@ from pydantic import ValidationError
 from aisos.intelligence.base import ChatMessage
 from aisos.intelligence.router import Router
 from aisos.orchestration.state import AgentState, StepNode
+from aisos.tools.registry import ToolRegistry
 
-_PLAN_SYSTEM = (
-    "You are the AISOS planner. Output ONLY a JSON object with a 'plan' key whose "
-    "value is a list of step objects. Each step must have: id (string), description "
-    "(string), tool (string|null), args (object), depends_on (list of step ids). "
-    "No prose, no markdown fences."
+_PLAN_SYSTEM_TEMPLATE = (
+    "You are the AISOS planner. Decompose the user's request into a JSON DAG.\n\n"
+    "Output ONLY a JSON object with a 'plan' key whose value is a list of step objects. "
+    "Each step must have: id (string), description (string), tool (string|null), "
+    "args (object), depends_on (list of step ids). "
+    "No prose, no markdown fences.\n\n"
+    "Tool selection rules:\n"
+    "- ONLY use tools from the catalog below; never invent tool names.\n"
+    "- For questions you can answer directly (greetings, status, simple Q&A), set "
+    "tool=null and put the answer in 'description'.\n"
+    "- 'args' must match the named tool's input schema.\n\n"
+    "Tool catalog:\n{catalog}"
 )
+
+
+def _format_catalog(tools: ToolRegistry | None) -> str:
+    if tools is None or not tools.all():
+        return "(no tools registered — use tool=null and answer in description)"
+    lines = []
+    for t in tools.all():
+        schema = t.input_schema.model_json_schema()
+        props = schema.get("properties", {})
+        arg_summary = ", ".join(f"{k}: {v.get('type', '?')}" for k, v in props.items()) or "(no args)"
+        lines.append(f"- {t.name} (risk={t.risk_level}): {t.description} | args: {arg_summary}")
+    return "\n".join(lines)
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
 
@@ -46,17 +66,24 @@ def parse_plan(raw: str) -> list[StepNode]:
 class Planner:
     """LangGraph-style node: prompt -> plan."""
 
-    def __init__(self, router: Router, capability: str = "plan") -> None:
+    def __init__(
+        self,
+        router: Router,
+        capability: str = "plan",
+        tools: ToolRegistry | None = None,
+    ) -> None:
         self._router = router
         self._capability = capability
+        self._tools = tools
 
     async def __call__(self, state: AgentState) -> AgentState:
         return await self.plan(state)
 
     async def plan(self, state: AgentState) -> AgentState:
         route = self._router.route(self._capability)
+        system = _PLAN_SYSTEM_TEMPLATE.format(catalog=_format_catalog(self._tools))
         messages: Sequence[ChatMessage] = [
-            {"role": "system", "content": _PLAN_SYSTEM},
+            {"role": "system", "content": system},
             {"role": "user", "content": state.prompt},
         ]
         raw = await route.provider.chat(messages, model=route.model)

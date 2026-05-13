@@ -85,7 +85,13 @@ class Orchestrator:
     async def _exec_node(self, node: StepNode) -> Any:
         if node.tool is None:
             return {"text": node.description}
-        tool = self._tools.get(node.tool)
+        try:
+            tool = self._tools.get(node.tool)
+        except KeyError:
+            # Planner referenced a tool that isn't registered. Degrade to the
+            # description so the user still gets something useful.
+            return {"text": f"(planner referenced unknown tool '{node.tool}'; "
+                            f"falling back to description)\n{node.description}"}
         rbac_check(self._config, self._agent_name, tool.required_scope)
         await self._hitl.gate(tool, node.args)
         validated = tool.validate(node.args)

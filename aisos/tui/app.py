@@ -75,7 +75,7 @@ class AISOSApp(App[int]):
     def _build_orchestrator(self) -> Orchestrator:
         provider = AzureOpenAIProvider(self._config)
         router = Router(self._config, {"azure_openai": provider})
-        planner = Planner(router)
+        planner = Planner(router, tools=self._tools)
         return Orchestrator(
             self._config, self._bus, planner, self._tools,
             agent_name="planner", audit=self._audit, cost_tracker=self._cost,
