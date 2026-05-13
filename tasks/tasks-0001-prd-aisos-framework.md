@@ -6,6 +6,7 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
 
 ### Project root
 - `pyproject.toml` — uv project metadata, deps, entry script.
+- `.python-version` — pins interpreter to 3.11.
 - `uv.lock` — lockfile (committed).
 - `.gitignore` — excludes `.env`, `*.db`, `.venv/`, `__pycache__/`.
 - `.env.example` — Azure OpenAI placeholders + `AISOS_DB_PATH`.
@@ -77,17 +78,17 @@ Source PRD: [0001-prd-aisos-framework.md](0001-prd-aisos-framework.md)
 
 ## Tasks
 
-- [ ] 1.0 Project scaffolding & configuration baseline
-  - [ ] 1.1 `uv init` project, pin Python 3.11+, create `pyproject.toml` w/ entry script `aisos = "aisos.__main__:main"`.
-  - [ ] 1.2 Add deps: `openai`, `langgraph`, `textual`, `pydantic>=2`, `pydantic-settings`, `python-dotenv`, `sqlite-vec`, `tiktoken`, `pytest`, `pytest-asyncio`.
-  - [ ] 1.3 Write `.gitignore` (Python defaults + `.env`, `*.db`, `*.db-journal`, `*.db-wal`, `*.db-shm`, `.venv/`).
-  - [ ] 1.4 Create `.env.example`: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_DEPLOYMENT_CHAT`, `AZURE_OPENAI_DEPLOYMENT_EMBED`, `AISOS_DB_PATH`.
-  - [ ] 1.5 Create `config.toml` skeleton: `[routing]`, `[rbac]`, `[cost]` sections.
-  - [ ] 1.6 Create dir tree under `aisos/` + `tools/` + `tests/` with empty `__init__.py` files.
-  - [ ] 1.7 `aisos/config.py` — pydantic-settings loader merging `.env` + `config.toml`.
-  - [ ] 1.8 `aisos/logging_setup.py` — JSON formatter, contextual filter (thread_id, agent_name).
-  - [ ] 1.9 `aisos/__main__.py` — `main()` sets `WindowsProactorEventLoopPolicy`, launches stub Textual app.
-  - [ ] 1.10 Smoke test: `uv run aisos` launches empty TUI without error.
+- [x] 1.0 Project scaffolding & configuration baseline
+  - [x] 1.1 `uv init` project, pin Python 3.11+, create `pyproject.toml` w/ entry script `aisos = "aisos.__main__:main"`.
+  - [x] 1.2 Add deps: `openai`, `langgraph`, `textual`, `pydantic>=2`, `pydantic-settings`, `python-dotenv`, `sqlite-vec`, `tiktoken`, `pytest`, `pytest-asyncio`.
+  - [x] 1.3 Write `.gitignore` (Python defaults + `.env`, `*.db`, `*.db-journal`, `*.db-wal`, `*.db-shm`, `.venv/`).
+  - [x] 1.4 Create `.env.example`: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_DEPLOYMENT_CHAT`, `AZURE_OPENAI_DEPLOYMENT_EMBED`, `AISOS_DB_PATH`.
+  - [x] 1.5 Create `config.toml` skeleton: `[routing]`, `[rbac]`, `[cost]` sections.
+  - [x] 1.6 Create dir tree under `aisos/` + `tools/` + `tests/` with empty `__init__.py` files.
+  - [x] 1.7 `aisos/config.py` — pydantic-settings loader merging `.env` + `config.toml`.
+  - [x] 1.8 `aisos/logging_setup.py` — JSON formatter, contextual filter (thread_id, agent_name).
+  - [x] 1.9 `aisos/__main__.py` — `main()` sets `WindowsProactorEventLoopPolicy`, launches stub Textual app.
+  - [x] 1.10 Smoke test: `uv run aisos` launches empty TUI without error.
 
 - [ ] 2.0 Memory & State subsystem (SQLite + `sqlite-vec`)
   - [ ] 2.1 `db.py` — `get_connection()` opens path from `AISOS_DB_PATH`, enables WAL, loads `sqlite-vec`.
