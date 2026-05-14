@@ -35,13 +35,13 @@ The Cyber Threat Hunting Scenario and expected results from the Agentic OS solut
 
     "There's a trending CISA alert about an active ransomware group exploiting a newly discovered print spooler vulnerability to drop a malicious payload named win-update-svc.exe. Find if any machine in our network has downloaded or executed this file over the past 30 days. If found, pull the parent process tree, check if they connected to external IPs, and isolate the compromised endpoints immediately."
 
-Step 1: Query Extraction & Dynamic KQL GenerationYour Intelligence Layer passes the unstructured prompt to a local model (like Qwen-2.5-Coder). It acts as a KQL Generation Agent to map the threat description against the official Microsoft Defender XDR Advanced Hunting schemas.
+Step 1: Query Extraction & Dynamic KQL GenerationYour Intelligence Layer passes the unstructured prompt to Azure OpenAI selected deployment model. It acts as a KQL Generation Agent to map the threat description against the official Microsoft Sentinel/Defender XDR schemas.
 
     The Action: The agent dynamically compiles a native KQL query targeting the DeviceFileEvents and DeviceProcessEvents tables.
 
-Step 2: Hitting the Defender API GatewayThe orchestration engine fires up a Tool Agent equipped with standard Python packages (like requests or httpx).
+Step 2: Hitting the Sentinel/Log Analytics API GatewayThe orchestration engine fires up a Tool Agent equipped with standard Python packages (like requests or httpx).
 
-    The Action: It utilizes your pre-configured corporate OAuth2 credentials to securely request an access token from Microsoft Graph. It then passes the generated KQL payload to the official Microsoft Defender XDR Advanced Hunting API Endpoint:
+    The Action: It utilizes your pre-configured corporate OAuth2 credentials to securely request an access token from Microsoft Graph. It then passes the generated KQL payload to the official Microsoft Senitnel/Log Analytics API Endpoint:
 
 Step 3: Stateful Log Correlation & Blast-Radius MappingThe API returns a JSON data packet confirming that two production servers executed the malicious executable. The State / Memory Layer of your OS intercepts this payload and immediately spawns a Correlation Agent.
 
@@ -55,15 +55,15 @@ What You See in Your UI LiveYour interface switches from a simple chat log to a 
 
 [Threat Hunt Active: CISA Print Spooler Exploitation]
 
-   📊 Querying Defender XDR API... DONE (2 Compromised Assets Found)
+   📊 Querying Sentinel API... DONE (2 Compromised Assets Found)
    🔍 Pulling Telemetry Logs... DONE (Outbound C2 connection detected)
    🔒 Enforcing Guardrails... PAUSED (Awaiting Human Authorization)
 
 System Action Prompt Displayed on Screen:
 
-    ⚠️ CRITICAL FINDING: win-update-svc.exe was executed on PROD-DB-01 and PROD-APP-02 by SYSTEM account. Outbound data exfiltration detected to malicious external IP: 185.220.101.5.Proposed Remediation Actions:Isolate machine PROD-DB-01 from the local network via Microsoft Defender EDR API.Isolate machine PROD-APP-02 from the local network via Microsoft Defender EDR API.Block malicious IP address 185.220.101.5 globally on corporate firewalls.[ APPROVE ALL ACTIONS ]  |  [ CANCEL & INVESTIGATE FURTHER ]
+    ⚠️ CRITICAL FINDING: win-update-svc.exe was executed on PROD-DB-01 and PROD-APP-02 by SYSTEM account. Outbound data exfiltration detected to malicious external IP: 185.220.101.5.Proposed Remediation Actions:Isolate machine PROD-DB-01 from the local network via Microsoft Sentinel API.Isolate machine PROD-APP-02 from the local network via Microsoft Defender EDR API.Block malicious IP address 185.220.101.5 globally on corporate firewalls.[ APPROVE ALL ACTIONS ]  |  [ CANCEL & INVESTIGATE FURTHER ]
 
-Step 5: Autonomous Incident Remediation
+Step 5: Autonomous Incident Remediation (OUT OF SCOPE) for the future.
 
     Once you click [ APPROVE ALL ACTIONS ], the Orchestration layer releases the loop freeze.
         The Action: A Remediation Agent executes a POST request back to the Microsoft Defender Machine Actions API endpoint, supplying the target IDs.

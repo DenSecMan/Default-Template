@@ -12,6 +12,10 @@ from textual.widgets import Header, Input
 from aisos.config import AppConfig, load_config
 from aisos.intelligence.azure_openai import AzureOpenAIProvider
 from aisos.intelligence.router import Router
+from aisos.memory.db import get_connection
+from aisos.memory.procedural import ProceduralMemory
+from aisos.memory.semantic import SemanticMemory
+from aisos.memory.short_term import ShortTermMemory, Step
 from aisos.observability.audit_log import AuditLog
 from aisos.observability.cost_tracker import CostTracker
 from aisos.observability.trace import TRACE_TOPIC
@@ -75,6 +79,15 @@ class AISOSApp(App[int]):
         self._agents = agents or self._build_agents()
         self._cost = CostTracker(self._config)
         self._audit = AuditLog("aisos.audit.log")
+        # Memory and provider must be created before the orchestrator so the
+        # planner can receive conversation history and results get embedded.
+        self._db_conn = get_connection(self._config.db_path)
+        self._short_term = ShortTermMemory(self._db_conn)
+        self._procedural = ProceduralMemory(self._db_conn)
+        self._provider = AzureOpenAIProvider(self._config)
+        self._semantic = SemanticMemory(self._db_conn, embedder=self._provider)
+        # Inject ProceduralMemory into playbook tools discovered by auto-scan.
+        self._inject_tool_deps()
         self._orchestrator = orchestrator or self._build_orchestrator()
         self._chat: ChatLog | None = None
         self._plan: PlanPanel | None = None
@@ -97,13 +110,24 @@ class AISOSApp(App[int]):
         reg.register(AgentSpec(name="default", description="Default agent", allowed_tool_scopes=["read"]))
         return reg
 
+    def _inject_tool_deps(self) -> None:
+        for tool_name in ("save_playbook", "run_playbook"):
+            try:
+                tool = self._tools.get(tool_name)
+                tool._procedural = self._procedural  # type: ignore[attr-defined]
+            except KeyError:
+                pass
+
     def _build_orchestrator(self) -> Orchestrator:
-        provider = AzureOpenAIProvider(self._config)
-        router = Router(self._config, {"azure_openai": provider})
-        planner = Planner(router, tools=self._tools, cost_tracker=self._cost)
+        router = Router(self._config, {"azure_openai": self._provider})
+        planner = Planner(
+            router, tools=self._tools, cost_tracker=self._cost,
+            memory=self._short_term,
+        )
         return Orchestrator(
             self._config, self._bus, planner, self._tools,
             agent_name="planner", audit=self._audit, cost_tracker=self._cost,
+            semantic=self._semantic,
         )
 
     def compose(self) -> ComposeResult:
@@ -167,7 +191,10 @@ class AISOSApp(App[int]):
     async def _post(self, role: str, body: str, *, render_markdown: bool = True) -> None:
         if self._chat is None:
             return
-        await self._chat.post_message_block(role, redact_output(body), render_markdown=render_markdown)
+        redacted = redact_output(body)
+        await self._chat.post_message_block(role, redacted, render_markdown=render_markdown)
+        if role in ("user", "assistant"):
+            self._short_term.append(Step(role=role, content=redacted))
 
     async def _post_and_get(self, role: str, body: str, *, render_markdown: bool = True):
         """Mount a ChatMessage and return the widget so it can be removed later."""
@@ -225,7 +252,11 @@ class AISOSApp(App[int]):
         if not text:
             return
         if is_command(text):
-            ctx = CommandContext(app=self, tools=self._tools, agents=self._agents, cost=self._cost)
+            ctx = CommandContext(
+                app=self, tools=self._tools, agents=self._agents, cost=self._cost,
+                short_term=self._short_term, procedural=self._procedural,
+                db_conn=self._db_conn, audit=self._audit,
+            )
             dispatch(ctx, text)
             return
         await self._post("user", text, render_markdown=False)

@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from aisos.intelligence.base import ChatMessage
 from aisos.intelligence.router import Router
 from aisos.intelligence.token_controller import count_messages, count_tokens
+from aisos.memory.short_term import ShortTermMemory
 from aisos.observability.cost_tracker import CostTracker
 from aisos.orchestration.state import AgentState, StepNode
 from aisos.tools.registry import ToolRegistry
@@ -75,12 +76,16 @@ class Planner:
         tools: ToolRegistry | None = None,
         cost_tracker: CostTracker | None = None,
         agent_name: str = "planner",
+        memory: ShortTermMemory | None = None,
+        context_turns: int = 10,
     ) -> None:
         self._router = router
         self._capability = capability
         self._tools = tools
         self._cost = cost_tracker
         self._agent_name = agent_name
+        self._memory = memory
+        self._context_turns = context_turns
 
     async def __call__(self, state: AgentState) -> AgentState:
         return await self.plan(state)
@@ -88,10 +93,12 @@ class Planner:
     async def plan(self, state: AgentState) -> AgentState:
         route = self._router.route(self._capability)
         system = _PLAN_SYSTEM_TEMPLATE.format(catalog=_format_catalog(self._tools))
-        messages: Sequence[ChatMessage] = [
-            {"role": "system", "content": system},
-            {"role": "user", "content": state.prompt},
-        ]
+        messages: list[ChatMessage] = [{"role": "system", "content": system}]
+        if self._memory is not None:
+            for step in self._memory.history()[-(self._context_turns * 2):]:
+                if step.role in ("user", "assistant"):
+                    messages.append({"role": step.role, "content": step.content})
+        messages.append({"role": "user", "content": state.prompt})
         raw = await route.provider.chat(messages, model=route.model)
         if self._cost is not None:
             in_tokens = count_messages(messages, route.model or "gpt-4o")
